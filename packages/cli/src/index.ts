@@ -1,3 +1,3 @@
-import serve from 'local-api';
+import serve from 'local-api'
 
-serve();
+serve()
