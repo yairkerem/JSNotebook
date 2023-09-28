@@ -1,5 +1,6 @@
-import { Dispatch } from 'redux';
-import { ActionType } from '../action-types';
+import { Dispatch } from 'redux'
+import { ActionType } from '../action-types'
+import axios from 'axios'
 import {
   UpdateCellAction,
   DeleteCellAction,
@@ -7,9 +8,10 @@ import {
   InsertCellAfterAction,
   Direction,
   Action,
-} from '../actions';
-import { CellTypes } from '../cell';
-import bundle from '../../bundler';
+} from '../actions'
+import { Cell, CellTypes } from '../cell'
+import bundle from '../../bundler'
+import { RootState } from '../reducers'
 
 export const updateCell = (id: string, content: string): UpdateCellAction => {
   return {
@@ -18,15 +20,15 @@ export const updateCell = (id: string, content: string): UpdateCellAction => {
       id,
       content,
     },
-  };
-};
+  }
+}
 
 export const deleteCell = (id: string): DeleteCellAction => {
   return {
     type: ActionType.DELETE_CELL,
     payload: id,
-  };
-};
+  }
+}
 
 export const moveCell = (id: string, direction: Direction): MoveCellAction => {
   return {
@@ -35,8 +37,8 @@ export const moveCell = (id: string, direction: Direction): MoveCellAction => {
       id,
       direction,
     },
-  };
-};
+  }
+}
 
 export const insertCellAfter = (
   id: string | null,
@@ -48,8 +50,8 @@ export const insertCellAfter = (
       id,
       type: cellType,
     },
-  };
-};
+  }
+}
 
 export const createBundle = (cellId: string, input: string) => {
   return async (dispatch: Dispatch<Action>) => {
@@ -58,9 +60,9 @@ export const createBundle = (cellId: string, input: string) => {
       payload: {
         cellId,
       },
-    });
+    })
 
-    const result = await bundle(input);
+    const result = await bundle(input)
 
     dispatch({
       type: ActionType.BUNDLE_COMPLETE,
@@ -68,6 +70,39 @@ export const createBundle = (cellId: string, input: string) => {
         cellId,
         bundle: result,
       },
-    });
-  };
-};
+    })
+  }
+}
+
+export const fetchCells = () => {
+  return async (dispatch: Dispatch<Action>) => {
+    dispatch({ type: ActionType.FETCH_CELLS })
+
+    try {
+      const { data }: { data: Cell[] } = await axios.get('/cells')
+      dispatch({ type: ActionType.FETCH_CELLS_COMPLETE, payload: data })
+    } catch (err) {
+      if (err instanceof Error) {
+        dispatch({ type: ActionType.FETCH_CELLS_ERROR, payload: err.message })
+      }
+    }
+  }
+}
+
+export const saveCells = () => {
+  return async (dispatch: Dispatch<Action>, getState: () => RootState) => {
+    // getState is a function that returns the current state of the redux store
+    const {
+      cells: { data, order },
+    } = getState()
+
+    const cells = order.map((id: string) => data[id])
+    try {
+      await axios.post('/cells', { cells })
+    } catch (err) {
+      if (err instanceof Error) {
+        dispatch({ type: ActionType.SAVE_CELLS_ERROR, payload: err.message })
+      }
+    }
+  }
+}
